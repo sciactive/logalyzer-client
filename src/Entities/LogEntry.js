@@ -637,7 +637,7 @@ export default class LogEntry extends Entity {
   }
 
   static getIpLocationData(ip, ipDataCache) {
-    const curl = require('curl');
+    const request = require('request');
 
     if (ipDataCache[ip]) {
       return Promise.resolve(ipDataCache[ip]);
@@ -668,7 +668,7 @@ export default class LogEntry extends Entity {
       });
       function fallback() {
         const ipInfoUrl = `http://ip2c.org/${ip}`;
-        curl.get(ipInfoUrl, null, function(err, response, body) {
+        request(ipInfoUrl, function(err, response, body) {
           if (err) {
             console.log("Couldn't get location data: "+err);
             reject(err);
