@@ -10,6 +10,11 @@ const NymphNode = require('nymph-client-node');
 NymphNode.enableCookies();
 const Nymph = NymphNode.Nymph;
 
+const alias = require('module-alias');
+alias.addAliases({
+  'LogEntry': __dirname+'/lib/Entities/LogEntry'
+});
+
 // Making gratuitous requests to someone else's service isn't very nice.
 const ipDataCache = {};
 
@@ -34,11 +39,13 @@ Nymph.init({
   restURL: argv['rest-url'] || 'http://localhost:8080/rest.php'
 });
 const logEntryTypes = {};
-const logEntryFiles = fs.readdirSync('./entities/');
+let entitiesDir = argv['d'] || argv['entities-dir'] || process.cwd()+'/build/';
+entitiesDir = entitiesDir[0] === '/' ? entitiesDir : process.cwd()+'/'+entitiesDir;
+const logEntryFiles = fs.readdirSync(entitiesDir+'/');
 for (let file of logEntryFiles) {
   if (file.match(/\.js$/) && file !== 'LogEntry.js') {
     const name = path.basename(file, '.js');
-    logEntryTypes[name] = require('./build/'+file.replace(/\.js$/, ''))[name];
+    logEntryTypes[name] = require(entitiesDir+'/'+file.replace(/\.js$/, ''))[name];
   }
 }
 
@@ -201,13 +208,13 @@ const Group = require('tilmeld').Group;
         // Parse the log line.
         try {
           const parseResult = await entry.parseAndSet(argv, ipDataCache);
+
+          if (!parseResult) {
+            // The entry class says not to save this one.
+            return;
+          }
         } catch (e) {
           console.log('\nError while parsing: ', e, '\n');
-          return;
-        }
-
-        if (!parseResult) {
-          // The entry class says not to save this one.
           return;
         }
 
@@ -392,6 +399,7 @@ usage: node logalyzer.js <command> [--rest-url=<Logalyzer server Rest URL>]
                          [--username=<username> | -u <username>]
                          [--password=<password> | -p <password>]
                          [--type=<type> | -t <type>]
+                         [--entities-dir=<dir> | -d <dir>]
 
 If you don't specify a Rest URL, 'http://localhost:8080/rest.php' will be used.
 
