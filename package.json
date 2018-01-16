@@ -1,0 +1,59 @@
+{
+  "name": "logalyzer-client",
+  "version": "0.0.1-alpha.1",
+  "description": "Client files for Logalyzer - Build a log analyzer for anything.",
+  "main": "logalyze.js",
+  "scripts": {
+    "build": "npm run build-components && npm run build-entities",
+    "build-components": "npm run build-logalyzer-app && npm run build-main-app",
+    "build-logalyzer-app": "svelte compile --format es src/Components/LogalyzerApp.html > lib/Components/LogalyzerApp.js && babel lib/Components/LogalyzerApp.js -o lib/Components/LogalyzerApp.js",
+    "build-main-app": "svelte compile --format es src/Components/MainApp.html > lib/Components/MainApp.js && babel lib/Components/MainApp.js -o lib/Components/MainApp.js",
+    "build-entities": "babel -d lib/Entities/ src/Entities/",
+    "watch-entities": "babel --watch -d lib/Entities/ src/Entities/",
+    "prepare": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sciactive/logalyzer-client.git"
+  },
+  "keywords": [
+    "log",
+    "analysis",
+    "analyzer",
+    "analyser",
+    "logging",
+    "logs"
+  ],
+  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/sciactive/logalyzer-client/issues"
+  },
+  "homepage": "https://github.com/sciactive/logalyzer-client#readme",
+  "dependencies": {
+    "chart.js": "^2.7.1",
+    "chartjs-plugin-zoom": "^0.6.2",
+    "compressing": "^1.2.3",
+    "curl": "^0.1.4",
+    "minimist": "^1.2.0",
+    "moment": "^2.20.1",
+    "n-readlines": "^0.2.8",
+    "nymph-client": "^3.0.3",
+    "nymph-client-node": "^2.0.1",
+    "nymph-query-editor": "^1.1.3",
+    "split": "^1.0.1",
+    "tilmeld": "^1.0.0-beta.11",
+    "ua-parser-js": "^0.7.17"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-stage-3": "^6.24.1",
+    "babel-watch": "^2.0.7",
+    "svelte": "^1.51.1",
+    "svelte-cli": "^2.1.0"
+  }
+}
