@@ -7,7 +7,7 @@ export default class LogEntry extends Entity {
 
   static etype = "logentry";
   // The name of the server class
-  static class = "LogEntry";
+  static class = "Logalyzer\\Entities\\LogEntry";
 
   static title = "Generic Log Entry";
   static filePattern = /^not_a_real_log_class/;
