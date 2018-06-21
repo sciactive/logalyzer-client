@@ -1,557 +1,6 @@
-import Nymph from "Nymph";
-import Entity from "NymphEntity";
+import {Nymph, Entity} from 'nymph-client';
 
-export default class LogEntry extends Entity {
-
-  // === Static Properties ===
-
-  static etype = "logentry";
-  // The name of the server class
-  static class = "Logalyzer\\Entities\\LogEntry";
-
-  static title = "Generic Log Entry";
-  static filePattern = /^not_a_real_log_class/;
-  static usesIpLocationInfo = false;
-  static checkMalformedLines = false;
-  static exactLinePattern = /.*$/; // Only used for checkMalformedLines.
-
-  static aggregateFunctions = {
-    ...LogEntry.defaultAggregateFunctions
-  }
-
-  static defaultAggregateFunctions = {
-    rawLogLine: {
-      name: "Raw Logs",
-      axisLabel: "Log Line",
-      defaultChartFunction: "rawDataEntries",
-      sorting: ["unchanged"],
-      func: function (entries, sort) {
-        const data = [], eventHandlers = {};
-
-        // Add all log entry lines.
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          const label = entry.get("line");
-
-          data.push({
-            label: label,
-            value: 1
-          });
-
-          eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
-            selectors.push({
-              type: "&",
-              strict: [
-                ["line", label]
-              ]
-            });
-            app.set({selectors});
-            alert("Added selector to filter for this log entry.");
-          };
-        }
-
-        return {data, eventHandlers};
-      }
-    }
-  }
-  static timeBasedAggregateFunctions = {
-    entriesPerSecond: {
-      name: "Entries Per Second",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "s")
-    },
-
-    entriesPerMinute: {
-      name: "Entries Per Minute",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "m")
-    },
-
-    entriesPerHour: {
-      name: "Entries Per Hour",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "h")
-    },
-
-    entriesPerDay: {
-      name: "Entries Per Day",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "d")
-    }
-  }
-  static timeLongTermBasedAggregateFunctions = {
-    entriesPerWeek: {
-      name: "Entries Per Week",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "w")
-    },
-
-    entriesPerMonth: {
-      name: "Entries Per Month",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "M")
-    },
-
-    entriesPerQuarter: {
-      name: "Entries Per Quarter",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "Q")
-    },
-
-    entriesPerYear: {
-      name: "Entries Per Year",
-      axisLabel: "Entries",
-      defaultChartFunction: "timeSeriesStepped",
-      sorting: ["unchanged"],
-      func: LogEntry.aggregateExtractPerTime("time", "y")
-    }
-  }
-  static httpRequestBasedAggregateFunctions = {
-    remoteHost: {
-      name: "Remote Host (Unique Visitors)",
-      axisLabel: "Requests",
-      defaultChartFunction: "rawDataEntries",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("remoteHost", "Unknown")
-    },
-
-    resources: {
-      name: "Requested Resources",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("resource", "Unknown")
-    },
-
-    methods: {
-      name: "Request Methods",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("method", "Unknown")
-    },
-
-    responseStatusCode: {
-      name: "Response Status Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("statusCode", "Unknown")
-    }
-  }
-  static refererBasedAggregateFunctions = {
-    refererByDomain: {
-      name: "Referer By Domain",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: function (entries, sort) {
-        const values = {
-          "Direct Request": 0,
-          "Unknown": 0
-        };
-        const refererDomainRegex = /^\w+:\/\/(?:www\.)?([A-Za-z0-9-:.]+)/g;
-        const data = [], eventHandlers = {};
-
-        // Go through and parse out the domain of the referer.
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          const value = entry.get("referer");
-
-          if (!value || value === "-") {
-            values["Direct Request"]++;
-          } else {
-            const match = refererDomainRegex.exec(value);
-            if (match !== null && match.length > 1) {
-              if (values[match[1]]) {
-                values[match[1]]++;
-              } else {
-                values[match[1]] = 1;
-              }
-            } else {
-              values["Unknown"]++;
-            }
-          }
-        }
-
-        // Convert every entry to an array.
-        for (let k in values) {
-          data.push({
-            label: k + " (" + (Math.round(values[k] / entries.length * 10000) / 100) + "%, " + values[k] + ")",
-            value: values[k],
-            sortProperty: k.toLowerCase()
-          });
-        }
-
-        if (sort === "value") {
-          data.sort((a, b) => b.value - a.value);
-        } else if (sort === "property") {
-          data.sort((a, b) => {
-            if (a.sortProperty < b.sortProperty) {
-              return -1;
-            } else if (b.sortProperty < a.sortProperty) {
-              return 1;
-            } else {
-              return 0;
-            }
-          });
-        }
-
-        return {data, eventHandlers};
-      }
-    },
-
-    searchTerms: {
-      name: "Search Terms",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: function (entries, sort) {
-        const values = {};
-        const searchTermsByServiceRegex = /^\w+:\/\/(?:www\.)?[A-Za-z0-9-:.]+\/.*q=([^&]+)(?:&|$)/g;
-        const data = [], eventHandlers = {};
-
-        // Go through and parse out the search terms and service.
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          const value = entry.get("referer");
-
-          if (!(!value || value === "-")) {
-            const match = searchTermsByServiceRegex.exec(value);
-            if (match !== null && match.length > 1) {
-              const key = decodeURIComponent(match[1].replace(/\+/g, ' '));
-              if (values[key]) {
-                values[key]++;
-              } else {
-                values[key] = 1;
-              }
-            }
-          }
-        }
-
-        // Convert every entry to an array.
-        for (let k in values) {
-          const label = k + " (" + (Math.round(values[k] / entries.length * 10000) / 100) + "%, " + values[k] + ")";
-          data.push({
-            label: label,
-            value: values[k],
-            sortProperty: k.toLowerCase()
-          });
-          eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
-            selectors.push({
-              type: "&",
-              like: [
-                ["referer", "%q="+(encodeURIComponent(k).replace(/%20/g, '+').replace(/%/g, '\%').replace(/_/g, '\_'))+"%"]
-              ]
-            });
-            app.set({selectors});
-            alert("Added selector to filter for this searth term.");
-          };
-        }
-
-        if (sort === "value") {
-          data.sort((a, b) => b.value - a.value);
-        } else if (sort === "property") {
-          data.sort((a, b) => {
-            if (a.sortProperty < b.sortProperty) {
-              return -1;
-            } else if (b.sortProperty < a.sortProperty) {
-              return 1;
-            } else {
-              return 0;
-            }
-          });
-        }
-
-        return {data, eventHandlers};
-      }
-    },
-
-    searchTermsByService: {
-      name: "Search Terms by Service",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: function (entries, sort) {
-        const values = {};
-        const searchTermsByServiceRegex = /^\w+:\/\/(?:www\.)?([A-Za-z0-9-:.]+)\/.*q=([^&]+)(?:&|$)/g;
-        const data = [], eventHandlers = {};
-
-        // Go through and parse out the search terms and service.
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          const value = entry.get("referer");
-
-          if (!(!value || value === "-")) {
-            const match = searchTermsByServiceRegex.exec(value);
-            if (match !== null && match.length > 2) {
-              const key = match[1] + ": " + decodeURIComponent(match[2].replace(/\+/g, ' '));
-              if (values[key]) {
-                values[key]++;
-              } else {
-                values[key] = 1;
-              }
-            }
-          }
-        }
-
-        // Convert every entry to an array.
-        for (let k in values) {
-          const label = k + " (" + (Math.round(values[k] / entries.length * 10000) / 100) + "%, " + values[k] + ")";
-          data.push({
-            label: label,
-            value: values[k],
-            sortProperty: k.toLowerCase()
-          });
-          eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
-            selectors.push({
-              type: "&",
-              like: [
-                ["referer", "%"+k.split(": ", 2)[0]+"/%q="+(encodeURIComponent(k.split(": ", 2)[1]).replace(/%20/g, '+').replace(/%/g, '\%').replace(/_/g, '\_'))+"%"]
-              ]
-            });
-            app.set({selectors});
-            alert("Added selector to filter for this searth term and service.");
-          };
-        }
-
-        if (sort === "value") {
-          data.sort((a, b) => b.value - a.value);
-        } else if (sort === "property") {
-          data.sort((a, b) => {
-            if (a.sortProperty < b.sortProperty) {
-              return -1;
-            } else if (b.sortProperty < a.sortProperty) {
-              return 1;
-            } else {
-              return 0;
-            }
-          });
-        }
-
-        return {data, eventHandlers};
-      }
-    },
-
-    allReferers: {
-      name: "All Referers",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("referer", "Direct Request")
-    }
-  }
-  static userAgentBasedAggregateFunctions = {
-    browser: {
-      name: "Browser",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaBrowserName", "Unknown")
-    },
-
-    browserVersion: {
-      name: "Browser Version",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaBrowserName", "Unknown", "uaBrowserVersion")
-    },
-
-    cpuArchitecture: {
-      name: "CPU Architecture",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaCpuArchitecture", "Unknown")
-    },
-
-    deviceType: {
-      name: "Device Type",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaDeviceType", "Unknown")
-    },
-
-    deviceVendor: {
-      name: "Device Vendor",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaDeviceVendor", "Unknown")
-    },
-
-    deviceModel: {
-      name: "Device Model",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaDeviceVendor", "Unknown", "uaDeviceModel")
-    },
-
-    engine: {
-      name: "Engine",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaEngineName", "Unknown")
-    },
-
-    engineVersion: {
-      name: "Engine Version",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaEngineName", "Unknown", "uaEngineVersion")
-    },
-
-    os: {
-      name: "OS",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaOsName", "Unknown")
-    },
-
-    osVersion: {
-      name: "OS Version",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("uaOsName", "Unknown", "uaOsVersion")
-    },
-
-    allUserAgents: {
-      name: "All User Agents",
-      axisLabel: "Requests",
-      defaultChartFunction: "horizontalBar",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("userAgent", "Unknown")
-    }
-  }
-  static geoBasedAggregateFunctions = {
-    timeZone: {
-      name: "Timezone",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("timeZone", "Unknown")
-    },
-
-    continentCode: {
-      name: "Continent Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("continentCode", "Unknown")
-    },
-
-    continent: {
-      name: "Continent",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("continent", "Unknown")
-    },
-
-    countryCode: {
-      name: "Country Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("countryCode", "Unknown")
-    },
-
-    country: {
-      name: "Country",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("country", "Unknown")
-    },
-
-    provinceCode: {
-      name: "Province Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("provinceCode", "Unknown")
-    },
-
-    province: {
-      name: "Province",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("province", "Unknown")
-    },
-
-    postalCode: {
-      name: "Postal Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("postalCode", "Unknown")
-    },
-
-    city: {
-      name: "City",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("city", "Unknown")
-    },
-
-    countryProvince: {
-      name: "Country and Province",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("country", "Unknown", "province")
-    },
-
-    countryCity: {
-      name: "Country and City",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("country", "Unknown", "city")
-    },
-
-    countryPostalCode: {
-      name: "Country and Postal Code",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("country", "Unknown", "postalCode")
-    },
-
-    provinceCity: {
-      name: "Province and City",
-      axisLabel: "Requests",
-      defaultChartFunction: "pie",
-      sorting: ["value", "property"],
-      func: LogEntry.aggregateExtractBy("province", "Unknown", "city")
-    }
-  }
+export class LogEntry extends Entity {
 
   // === Constructor ===
 
@@ -618,7 +67,7 @@ export default class LogEntry extends Entity {
   }
 
   getLogLine() {
-    return this.logLines.join("\n");
+    return this.logLines.join('\n');
   }
 
   isLogLineContinuation(line) {
@@ -647,7 +96,7 @@ export default class LogEntry extends Entity {
       return Promise.resolve(ipDataCache[ip]);
     }
 
-    console.log("Looking up location data for IP: "+ip);
+    console.log('Looking up location data for IP: '+ip);
 
     ipDataCache[ip] = new Promise((resolve, reject) => {
       LogEntry.getGeoLite2IpInfo(ip).then((ipInfo) => {
@@ -659,15 +108,15 @@ export default class LogEntry extends Entity {
           }
         }
         if (!nonNullFound) {
-          console.log("IP location data not found in GeoLite2 DB.");
-          console.log("Falling back to ip2c.org...");
+          console.log('IP location data not found in GeoLite2 DB.');
+          console.log('Falling back to ip2c.org...');
           fallback();
           return;
         }
         resolve(ipInfo);
       }, (err) => {
         console.log("Couldn't get location data from GeoLite2 DB: "+err);
-        console.log("Falling back to ip2c.org...");
+        console.log('Falling back to ip2c.org...');
         fallback();
       });
       function fallback() {
@@ -734,7 +183,7 @@ export default class LogEntry extends Entity {
         const entry = entries[i];
         const value = entry.get(property);
 
-        if ((!value && value !== 0) || value === "-") {
+        if ((!value && value !== 0) || value === '-') {
           if (values[unknownIsCalled]) {
             values[unknownIsCalled].value++;
           } else {
@@ -770,7 +219,7 @@ export default class LogEntry extends Entity {
 
       // Convert every entry to an array.
       for (let k in values) {
-        const label = k + " (" + (Math.round(values[k].value / entries.length * 10000) / 100) + "%, " + values[k].value + ")";
+        const label = k + ' (' + (Math.round(values[k].value / entries.length * 10000) / 100) + '%, ' + values[k].value + ')';
         data.push({
           label: label,
           value: values[k].value,
@@ -778,44 +227,44 @@ export default class LogEntry extends Entity {
         });
         if (k === unknownIsCalled) {
           eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
+            const selectors = app.get().selectors;
             selectors.push({
-              type: "&",
-              "1": {
-                type: "|",
+              type: '&',
+              '1': {
+                type: '|',
                 data: [
                   [property, false]
                 ],
                 strict: [
-                  [property, "-"]
+                  [property, '-']
                 ],
-                "!isset": [property]
+                '!isset': [property]
               },
-              "!strict": [
+              '!strict': [
                 [property, 0]
               ]
             });
             app.set({selectors});
-            alert("Added selector to filter for an unknown " + property + ".");
+            alert('Added selector to filter for an unknown ' + property + '.');
           };
         } else {
           eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
+            const selectors = app.get().selectors;
             if (appendProperty) {
-              if (values[k].appendValue === "-") {
+              if (values[k].appendValue === '-') {
                 selectors.push({
-                  type: "&",
-                  "1": {
-                    type: "|",
+                  type: '&',
+                  '1': {
+                    type: '|',
                     data: [
                       [appendProperty, false]
                     ],
                     strict: [
-                      [appendProperty, "-"]
+                      [appendProperty, '-']
                     ],
-                    "!isset": [appendProperty]
+                    '!isset': [appendProperty]
                   },
-                  "!strict": [
+                  '!strict': [
                     [appendProperty, 0]
                   ],
                   strict: [
@@ -824,7 +273,7 @@ export default class LogEntry extends Entity {
                 });
               } else {
                 selectors.push({
-                  type: "&",
+                  type: '&',
                   strict: [
                     [property, values[k].propValue],
                     [appendProperty, values[k].appendValue]
@@ -833,25 +282,25 @@ export default class LogEntry extends Entity {
               }
             } else {
               selectors.push({
-                type: "&",
+                type: '&',
                 strict: [
                   [property, values[k].propValue]
                 ]
               });
             }
             app.set({selectors});
-            alert("Added selector to filter for this " + property + (appendProperty ? " and " + appendProperty : "") + ".");
+            alert('Added selector to filter for this ' + property + (appendProperty ? ' and ' + appendProperty : '') + '.');
           };
         }
       }
 
-      if (sort === "value") {
+      if (sort === 'value') {
         data.sort((a, b) => b.value - a.value);
-      } else if (sort === "property") {
+      } else if (sort === 'property') {
         data.sort((a, b) => {
-          if (typeof a.sortProperty === "number" && typeof b.sortProperty !== "number") {
+          if (typeof a.sortProperty === 'number' && typeof b.sortProperty !== 'number') {
             return -1;
-          } else if (typeof b.sortProperty === "number" && typeof a.sortProperty !== "number") {
+          } else if (typeof b.sortProperty === 'number' && typeof a.sortProperty !== 'number') {
             return 1;
           } else if (a.sortProperty < b.sortProperty) {
             return -1;
@@ -877,16 +326,16 @@ export default class LogEntry extends Entity {
         const value = entry.get(property);
 
         if (value === []) {
-          if (values["Empty"]) {
-            values["Empty"].value++;
+          if (values['Empty']) {
+            values['Empty'].value++;
           } else {
-            values["Empty"] = {value: 1};
+            values['Empty'] = {value: 1};
           }
         } else if (!value) {
-          if (values["Invalid"]) {
-            values["Invalid"].value++;
+          if (values['Invalid']) {
+            values['Invalid'].value++;
           } else {
-            values["Invalid"] = {value: 1};
+            values['Invalid'] = {value: 1};
           }
         } else {
           for (let finalVal of value) {
@@ -904,59 +353,59 @@ export default class LogEntry extends Entity {
 
       // Convert every entry to an array.
       for (let k in values) {
-        const label = k + " (" + (Math.round(values[k].value / entries.length * 10000) / 100) + "%, " + values[k].value + ")";
+        const label = k + ' (' + (Math.round(values[k].value / entries.length * 10000) / 100) + '%, ' + values[k].value + ')';
         data.push({
           label: label,
           value: values[k].value,
           sortProperty: (k.match(/^[0-9.]+$/) && parseFloat(k, 10) !== NaN) ? parseFloat(k, 10) : k.toLowerCase()
         });
-        if (k === "Empty") {
+        if (k === 'Empty') {
           eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
+            const selectors = app.get().selectors;
             selectors.push({
-              type: "&",
+              type: '&',
               strict: [
                 [property, []]
               ]
             });
             app.set({selectors});
-            alert("Added selector to filter for empty " + property + ".");
+            alert('Added selector to filter for empty ' + property + '.');
           };
-        } else if (k === "Invalid") {
+        } else if (k === 'Invalid') {
           eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
+            const selectors = app.get().selectors;
             selectors.push({
-              type: "|",
+              type: '|',
               data: [
                 [property, false]
               ],
-              "!isset": [property]
+              '!isset': [property]
             });
             app.set({selectors});
-            alert("Added selector to filter for invalid " + property + ".");
+            alert('Added selector to filter for invalid ' + property + '.');
           };
         } else {
           eventHandlers[label] = function(app) {
-            const selectors = app.get("selectors");
+            const selectors = app.get().selectors;
             selectors.push({
-              type: "&",
+              type: '&',
               array: [
                 [property, values[k].propValue]
               ]
             });
             app.set({selectors});
-            alert("Added selector to filter for this value in " + property + ".");
+            alert('Added selector to filter for this value in ' + property + '.');
           };
         }
       }
 
-      if (sort === "value") {
+      if (sort === 'value') {
         data.sort((a, b) => b.value - a.value);
-      } else if (sort === "property") {
+      } else if (sort === 'property') {
         data.sort((a, b) => {
-          if (typeof a.sortProperty === "number" && typeof b.sortProperty !== "number") {
+          if (typeof a.sortProperty === 'number' && typeof b.sortProperty !== 'number') {
             return -1;
-          } else if (typeof b.sortProperty === "number" && typeof a.sortProperty !== "number") {
+          } else if (typeof b.sortProperty === 'number' && typeof a.sortProperty !== 'number') {
             return 1;
           } else if (a.sortProperty < b.sortProperty) {
             return -1;
@@ -974,10 +423,10 @@ export default class LogEntry extends Entity {
 
   static aggregateExtractPerTime(property, timeUnit) {
     return function (entries, sort) {
-      const timeFormat = "YYYY-MM-DD HH:mm:ss";
+      const timeFormat = 'YYYY-MM-DD HH:mm:ss';
 
       function newDateString(timestamp) {
-        return moment(""+timestamp, "X").format(timeFormat);
+        return moment(''+timestamp, 'X').format(timeFormat);
       }
 
       let earliest, latest, timePer = {}, data = [];
@@ -1043,5 +492,561 @@ export default class LogEntry extends Entity {
   }
 }
 
+// === Static Properties ===
+
+// The name of the server class
+LogEntry.class = 'Logalyzer\\Entities\\LogEntry';
+
+LogEntry.title = 'Log Entry Base Class';
+LogEntry.filePattern = /^not_a_real_log_class/;
+LogEntry.usesIpLocationInfo = false;
+LogEntry.checkMalformedLines = false;
+LogEntry.exactLinePattern = /.*$/; // Only used for checkMalformedLines.
+
+LogEntry.defaultAggregateFunctions = {
+  rawLogLine: {
+    name: 'Raw Logs',
+    axisLabel: 'Log Line',
+    defaultChartFunction: 'rawDataEntries',
+    sorting: ['unchanged'],
+    func: function (entries, sort) {
+      const data = [], eventHandlers = {};
+
+      // Add all log entry lines.
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const label = entry.get('line');
+
+        data.push({
+          label: label,
+          value: 1
+        });
+
+        eventHandlers[label] = function(app) {
+          const selectors = app.get().selectors;
+          selectors.push({
+            type: '&',
+            strict: [
+              ['line', label]
+            ]
+          });
+          app.set({selectors});
+          alert('Added selector to filter for this log entry.');
+        };
+      }
+
+      return {data, eventHandlers};
+    }
+  }
+};
+
+LogEntry.timeBasedAggregateFunctions = {
+  entriesPerSecond: {
+    name: 'Entries Per Second',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 's')
+  },
+
+  entriesPerMinute: {
+    name: 'Entries Per Minute',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'm')
+  },
+
+  entriesPerHour: {
+    name: 'Entries Per Hour',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'h')
+  },
+
+  entriesPerDay: {
+    name: 'Entries Per Day',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'd')
+  }
+};
+
+LogEntry.timeLongTermBasedAggregateFunctions = {
+  entriesPerWeek: {
+    name: 'Entries Per Week',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'w')
+  },
+
+  entriesPerMonth: {
+    name: 'Entries Per Month',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'M')
+  },
+
+  entriesPerQuarter: {
+    name: 'Entries Per Quarter',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'Q')
+  },
+
+  entriesPerYear: {
+    name: 'Entries Per Year',
+    axisLabel: 'Entries',
+    defaultChartFunction: 'timeSeriesStepped',
+    sorting: ['unchanged'],
+    func: LogEntry.aggregateExtractPerTime('time', 'y')
+  }
+};
+
+LogEntry.httpRequestBasedAggregateFunctions = {
+  remoteHost: {
+    name: 'Remote Host (Unique Visitors)',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'rawDataEntries',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('remoteHost', 'Unknown')
+  },
+
+  resources: {
+    name: 'Requested Resources',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('resource', 'Unknown')
+  },
+
+  methods: {
+    name: 'Request Methods',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('method', 'Unknown')
+  },
+
+  responseStatusCode: {
+    name: 'Response Status Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('statusCode', 'Unknown')
+  }
+};
+
+LogEntry.refererBasedAggregateFunctions = {
+  refererByDomain: {
+    name: 'Referer By Domain',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: function (entries, sort) {
+      const values = {
+        'Direct Request': 0,
+        'Unknown': 0
+      };
+      const refererDomainRegex = /^\w+:\/\/(?:www\.)?([A-Za-z0-9-:.]+)/g;
+      const data = [], eventHandlers = {};
+
+      // Go through and parse out the domain of the referer.
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const value = entry.get('referer');
+
+        if (!value || value === '-') {
+          values['Direct Request']++;
+        } else {
+          const match = refererDomainRegex.exec(value);
+          if (match !== null && match.length > 1) {
+            if (values[match[1]]) {
+              values[match[1]]++;
+            } else {
+              values[match[1]] = 1;
+            }
+          } else {
+            values['Unknown']++;
+          }
+        }
+      }
+
+      // Convert every entry to an array.
+      for (let k in values) {
+        data.push({
+          label: k + ' (' + (Math.round(values[k] / entries.length * 10000) / 100) + '%, ' + values[k] + ')',
+          value: values[k],
+          sortProperty: k.toLowerCase()
+        });
+      }
+
+      if (sort === 'value') {
+        data.sort((a, b) => b.value - a.value);
+      } else if (sort === 'property') {
+        data.sort((a, b) => {
+          if (a.sortProperty < b.sortProperty) {
+            return -1;
+          } else if (b.sortProperty < a.sortProperty) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+      }
+
+      return {data, eventHandlers};
+    }
+  },
+
+  searchTerms: {
+    name: 'Search Terms',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: function (entries, sort) {
+      const values = {};
+      const searchTermsByServiceRegex = /^\w+:\/\/(?:www\.)?[A-Za-z0-9-:.]+\/.*q=([^&]+)(?:&|$)/g;
+      const data = [], eventHandlers = {};
+
+      // Go through and parse out the search terms and service.
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const value = entry.get('referer');
+
+        if (!(!value || value === '-')) {
+          const match = searchTermsByServiceRegex.exec(value);
+          if (match !== null && match.length > 1) {
+            const key = decodeURIComponent(match[1].replace(/\+/g, ' '));
+            if (values[key]) {
+              values[key]++;
+            } else {
+              values[key] = 1;
+            }
+          }
+        }
+      }
+
+      // Convert every entry to an array.
+      for (let k in values) {
+        const label = k + ' (' + (Math.round(values[k] / entries.length * 10000) / 100) + '%, ' + values[k] + ')';
+        data.push({
+          label: label,
+          value: values[k],
+          sortProperty: k.toLowerCase()
+        });
+        eventHandlers[label] = function(app) {
+          const selectors = app.get().selectors;
+          selectors.push({
+            type: '&',
+            like: [
+              ['referer', '%q='+(encodeURIComponent(k).replace(/%20/g, '+').replace(/%/g, '\%').replace(/_/g, '\_'))+'%']
+            ]
+          });
+          app.set({selectors});
+          alert('Added selector to filter for this searth term.');
+        };
+      }
+
+      if (sort === 'value') {
+        data.sort((a, b) => b.value - a.value);
+      } else if (sort === 'property') {
+        data.sort((a, b) => {
+          if (a.sortProperty < b.sortProperty) {
+            return -1;
+          } else if (b.sortProperty < a.sortProperty) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+      }
+
+      return {data, eventHandlers};
+    }
+  },
+
+  searchTermsByService: {
+    name: 'Search Terms by Service',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: function (entries, sort) {
+      const values = {};
+      const searchTermsByServiceRegex = /^\w+:\/\/(?:www\.)?([A-Za-z0-9-:.]+)\/.*q=([^&]+)(?:&|$)/g;
+      const data = [], eventHandlers = {};
+
+      // Go through and parse out the search terms and service.
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const value = entry.get('referer');
+
+        if (!(!value || value === '-')) {
+          const match = searchTermsByServiceRegex.exec(value);
+          if (match !== null && match.length > 2) {
+            const key = match[1] + ': ' + decodeURIComponent(match[2].replace(/\+/g, ' '));
+            if (values[key]) {
+              values[key]++;
+            } else {
+              values[key] = 1;
+            }
+          }
+        }
+      }
+
+      // Convert every entry to an array.
+      for (let k in values) {
+        const label = k + ' (' + (Math.round(values[k] / entries.length * 10000) / 100) + '%, ' + values[k] + ')';
+        data.push({
+          label: label,
+          value: values[k],
+          sortProperty: k.toLowerCase()
+        });
+        eventHandlers[label] = function(app) {
+          const selectors = app.get().selectors;
+          selectors.push({
+            type: '&',
+            like: [
+              ['referer', '%'+k.split(': ', 2)[0]+'/%q='+(encodeURIComponent(k.split(': ', 2)[1]).replace(/%20/g, '+').replace(/%/g, '\%').replace(/_/g, '\_'))+'%']
+            ]
+          });
+          app.set({selectors});
+          alert('Added selector to filter for this searth term and service.');
+        };
+      }
+
+      if (sort === 'value') {
+        data.sort((a, b) => b.value - a.value);
+      } else if (sort === 'property') {
+        data.sort((a, b) => {
+          if (a.sortProperty < b.sortProperty) {
+            return -1;
+          } else if (b.sortProperty < a.sortProperty) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+      }
+
+      return {data, eventHandlers};
+    }
+  },
+
+  allReferers: {
+    name: 'All Referers',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('referer', 'Direct Request')
+  }
+};
+
+LogEntry.userAgentBasedAggregateFunctions = {
+  browser: {
+    name: 'Browser',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaBrowserName', 'Unknown')
+  },
+
+  browserVersion: {
+    name: 'Browser Version',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaBrowserName', 'Unknown', 'uaBrowserVersion')
+  },
+
+  cpuArchitecture: {
+    name: 'CPU Architecture',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaCpuArchitecture', 'Unknown')
+  },
+
+  deviceType: {
+    name: 'Device Type',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaDeviceType', 'Unknown')
+  },
+
+  deviceVendor: {
+    name: 'Device Vendor',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaDeviceVendor', 'Unknown')
+  },
+
+  deviceModel: {
+    name: 'Device Model',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaDeviceVendor', 'Unknown', 'uaDeviceModel')
+  },
+
+  engine: {
+    name: 'Engine',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaEngineName', 'Unknown')
+  },
+
+  engineVersion: {
+    name: 'Engine Version',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaEngineName', 'Unknown', 'uaEngineVersion')
+  },
+
+  os: {
+    name: 'OS',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaOsName', 'Unknown')
+  },
+
+  osVersion: {
+    name: 'OS Version',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('uaOsName', 'Unknown', 'uaOsVersion')
+  },
+
+  allUserAgents: {
+    name: 'All User Agents',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'horizontalBar',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('userAgent', 'Unknown')
+  }
+};
+
+LogEntry.geoBasedAggregateFunctions = {
+  timeZone: {
+    name: 'Timezone',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('timeZone', 'Unknown')
+  },
+
+  continentCode: {
+    name: 'Continent Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('continentCode', 'Unknown')
+  },
+
+  continent: {
+    name: 'Continent',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('continent', 'Unknown')
+  },
+
+  countryCode: {
+    name: 'Country Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('countryCode', 'Unknown')
+  },
+
+  country: {
+    name: 'Country',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('country', 'Unknown')
+  },
+
+  provinceCode: {
+    name: 'Province Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('provinceCode', 'Unknown')
+  },
+
+  province: {
+    name: 'Province',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('province', 'Unknown')
+  },
+
+  postalCode: {
+    name: 'Postal Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('postalCode', 'Unknown')
+  },
+
+  city: {
+    name: 'City',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('city', 'Unknown')
+  },
+
+  countryProvince: {
+    name: 'Country and Province',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('country', 'Unknown', 'province')
+  },
+
+  countryCity: {
+    name: 'Country and City',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('country', 'Unknown', 'city')
+  },
+
+  countryPostalCode: {
+    name: 'Country and Postal Code',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('country', 'Unknown', 'postalCode')
+  },
+
+  provinceCity: {
+    name: 'Province and City',
+    axisLabel: 'Requests',
+    defaultChartFunction: 'pie',
+    sorting: ['value', 'property'],
+    func: LogEntry.aggregateExtractBy('province', 'Unknown', 'city')
+  }
+};
+
+LogEntry.aggregateFunctions = {
+  ...LogEntry.defaultAggregateFunctions
+};
+
 Nymph.setEntityClass(LogEntry.class, LogEntry);
-export {LogEntry};
+
+export default LogEntry;

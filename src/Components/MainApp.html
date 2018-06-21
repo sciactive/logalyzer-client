@@ -1,4 +1,4 @@
-{{#if currentUser === false}}
+{#if currentUser === false}
   <div class="container-fluid" style="height: 100vh;">
     <div class="row align-items-center justify-content-center" style="height: 100vh;">
       <div class="col-auto">
@@ -10,12 +10,12 @@
       </div>
     </div>
   </div>
-{{/if}}
-{{#if currentUser !== false}}
+{/if}
+{#if currentUser !== false}
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <span class="navbar-brand mb-0 h1">Logalyzer <small>{{brand}}</small></span>
-      {{#if currentUser}}
+      <span class="navbar-brand mb-0 h1">Logalyzer <small>{brand}</small></span>
+      {#if currentUser}
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -23,15 +23,15 @@
           <ul class="navbar-nav ml-auto">
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle p-0" href="javascript:void(0)" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                {{#if userAvatar !== null}}
-                  <img class="rounded-circle" src="{{userAvatar}}" alt="{{currentUser.data.nameFirst}}" />
-                {{else}}
-                  {{currentUser.data.nameFirst}}
-                {{/if}}
+                {#if userAvatar !== null}
+                  <img class="rounded-circle" src="{userAvatar}" alt="{currentUser.data.nameFirst}" />
+                {:else}
+                  {currentUser.data.nameFirst}
+                {/if}
               </a>
               <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
                 <h6 class="dropdown-header">
-                  {{currentUser.data.name}}
+                  {currentUser.data.name}
                 </h6>
                 <a class="dropdown-item" href="javascript:void(0)" data-toggle="modal" data-target="#accountInfoModal">
                   Account Info
@@ -40,7 +40,7 @@
                 <a class="dropdown-item" href="javascript:void(0)" on:click="logout()">
                   Log Out
                 </a>
-                {{#if isTilmeldAdmin}}
+                {#if isTilmeldAdmin}
                   <div class="dropdown-divider"></div>
                   <h6 class="dropdown-header">
                     Admin
@@ -48,16 +48,16 @@
                   <a class="dropdown-item" href="/user/" target="_blank">
                     User Admin App
                   </a>
-                {{/if}}
+                {/if}
               </div>
             </li>
           </ul>
         </div>
-      {{/if}}
+      {/if}
     </div>
   </nav>
-{{/if}}
-{{#if currentUser === null}}
+{/if}
+{#if currentUser === null}
   <div class="container mt-3">
     <div class="row">
       <div class="col-sm-4 order-sm-2">
@@ -67,23 +67,27 @@
             classSelect="form-control"
             classTextarea="form-control"
             classSubmit="btn btn-primary"
-            classButton="btn btn-secondary"></TilmeldLogin>
+            classButtonGroup="btn-group d-flex"
+            classButton="btn btn-secondary"
+            classButtonToggle="flex-grow-1"
+            classButtonActive="active"
+            disableActiveButton="{false}"></TilmeldLogin>
       </div>
       <div class="col-sm-8 order-sm-1">
         <div class="jumbotron">
-          <h1 class="display-4">Logalyzer for {{brand}}!</h1>
-          <p class="lead">Log analyzer for {{brand}}.</p>
+          <h1 class="display-4">Logalyzer for {brand}!</h1>
+          <p class="lead">Log analyzer for {brand}.</p>
           <hr class="my-4">
           <p>Logalyzer can dissect your server logs and aggregate the results into charts and graphs, helping you gain valuable insight on your users' activities and preferences.</p>
           <p class="lead">
-            <a class="btn btn-primary btn-lg" href="{{brandLinkUrl}}" role="button">{{brandLinkText}}</a>
+            <a class="btn btn-primary btn-lg" href="{brandLinkUrl}" role="button">{brandLinkText}</a>
           </p>
         </div>
       </div>
     </div>
   </div>
-{{/if}}
-{{#if currentUser}}
+{/if}
+{#if currentUser}
   <div class="container-fluid mt-3">
     <LogalyzerApp
         bind:supportedClasses
@@ -124,9 +128,9 @@
             <label for="accountDetailsTimezone">Timezone</label>
             <select class="form-control" id="accountDetailsTimezone" bind:value="currentUser.data.timezone">
               <option>--Default--</option>
-              {{#each clientConfig.timezones as tz}}
-                <option value="{{tz}}">{{tz}}</option>
-              {{/each}}
+              {#each clientConfig.timezones as tz}
+                <option value="{tz}">{tz}</option>
+              {/each}
             </select>
           </div>
           <div class="form-group">
@@ -147,13 +151,11 @@
       </div>
     </div>
   </div>
-{{/if}}
+{/if}
 
 <script>
   import LogalyzerApp from './LogalyzerApp.html';
-  import User from 'User';
-  import TilmeldLogin from 'TilmeldLogin';
-  import TilmeldChangePassword from 'TilmeldChangePassword';
+  import {User, TilmeldLogin, TilmeldChangePassword} from 'tilmeld-client';
 
   export default {
     oncreate () {
@@ -161,7 +163,7 @@
       User.current().then((currentUser) => {
         this.set({currentUser});
       }, (errObj) => {
-        alert("Error: "+errObj.textStatus);
+        alert('Error: '+errObj.textStatus);
       });
 
       // Handle logins and logouts.
@@ -172,14 +174,21 @@
         this.set({currentUser: null});
       });
 
-      this.observe('currentUser', (user) => {
-        if (user) {
+      // Get the client config (for timezones).
+      User.getClientConfig().then((clientConfig) => {
+        this.set({clientConfig});
+      });
+    },
+
+    onstate ({changed, current}) {
+      if (changed.currentUser) {
+        if (current.currentUser) {
           // Get the user's avatar.
-          user.getAvatar().then((userAvatar) => {
+          current.currentUser.getAvatar().then((userAvatar) => {
             this.set({userAvatar});
           });
           // Is the user a Tilmeld admin?
-          user.gatekeeper('tilmeld/admin').then((isTilmeldAdmin) => {
+          current.currentUser.gatekeeper('tilmeld/admin').then((isTilmeldAdmin) => {
             this.set({isTilmeldAdmin});
           });
         } else {
@@ -188,12 +197,7 @@
             isTilmeldAdmin: false
           });
         }
-      });
-
-      // Get the client config (for timezones).
-      User.getClientConfig().then((clientConfig) => {
-        this.set({clientConfig});
-      });
+      }
     },
 
     data () {
@@ -215,13 +219,13 @@
 
     methods: {
       saveUser () {
-        this.get('currentUser').save().then(() => {}, (errObj) => {
+        this.get().currentUser.save().then(() => {}, (errObj) => {
           alert('Error: '+errObj.textStatus);
         });
       },
 
       logout () {
-        this.get('currentUser').logout();
+        this.get().currentUser.logout();
       }
     },
 

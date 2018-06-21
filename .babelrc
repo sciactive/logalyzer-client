@@ -1,15 +1,15 @@
 {
   "presets": [
-    ["env", {
-      "targets": {
-        "browsers": ["last 2 Chrome versions", "last 2 Firefox versions", "last 2 Edge versions", "last 2 Safari versions"],
-        "node": "current"
-      }
-    }],
+    "env",
     "stage-3"
   ],
   "plugins": [
-    "transform-class-properties",
-    "transform-es2015-modules-umd"
+    ["transform-es2015-modules-umd", {
+      "globals": {
+        "nymph-client": "NymphClient",
+        "tilmeld-client": "TilmeldClient",
+        "nymph-query-editor": "NymphQueryEditor"
+      }
+    }]
   ]
 }

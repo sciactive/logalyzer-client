@@ -1,36 +1,36 @@
 <div>
   <div class="d-flex">
     <button type="button" class="btn btn-secondary" on:click="toggleQueryEditor()">
-      {{#if __showQueryEditor}}Hide{{else}}Show{{/if}} Query Editor
+      {#if _showQueryEditor}Hide{:else}Show{/if} Query Editor
     </button>
     <label class="mx-2 mb-0">
       Aggreg.
-      <select class="form-control d-inline w-auto ml-2" bind:value="aggregateFunction" on:change="set({chartFunction: __aggregateFunctions[aggregateFunction].defaultChartFunction})">
-        {{#each __aggregateFunctionsKeys as key}}
-          <option value="{{key}}">
-            {{__aggregateFunctions[key].name}}
+      <select class="form-control d-inline w-auto ml-2" bind:value="aggregateFunction" on:change="set({chartFunction: _aggregateFunctions[aggregateFunction].defaultChartFunction})">
+        {#each _aggregateFunctionsKeys as key}
+          <option value="{key}">
+            {_aggregateFunctions[key].name}
           </option>
-        {{/each}}
+        {/each}
       </select>
     </label>
     <label class="mx-2 mb-0">
       Chart
       <select class="form-control d-inline w-auto ml-2" bind:value="chartFunction">
-        {{#each __chartFunctionsKeys as key}}
-          <option value="{{key}}">
-            {{__chartFunctions[key].name}}
+        {#each _chartFunctionsKeys as key}
+          <option value="{key}">
+            {_chartFunctions[key].name}
           </option>
-        {{/each}}
+        {/each}
       </select>
     </label>
     <label class="mx-2 mb-0">
       Sort
       <select class="form-control d-inline w-auto ml-2" bind:value="sort">
-        {{#each __aggregateFunctions[aggregateFunction].sorting as sortOption}}
-          <option value="{{sortOption}}">
-            {{sortOption.charAt(0).toUpperCase() + sortOption.substr(1)}}
+        {#each _aggregateFunctions[aggregateFunction].sorting as sortOption}
+          <option value="{sortOption}">
+            {sortOption.charAt(0).toUpperCase() + sortOption.substr(1)}
           </option>
-        {{/each}}
+        {/each}
       </select>
     </label>
     <div class="display-inline-block ml-auto">
@@ -40,7 +40,7 @@
       <button type="button" class="btn btn-primary" on:click="runQuery()">Run</button>
     </div>
   </div>
-  <div class="mb-3 {{__showQueryEditor ? '' : 'd-none'}}">
+  <div class="mb-3 {_showQueryEditor ? '' : 'd-none'}">
     <QueryEditor
         bind:options
         bind:selectors
@@ -54,26 +54,26 @@
   </div>
   <hr />
   <div style="position: relative;">
-    <div class="loader {{__loading ? '' : 'd-none'}}"></div>
-    <div class="chart-container" ref:canvascontainer style="position: relative; height: {{chartHeight}}px; width: 100%">
-        <div class="{{(__currentChart && __currentChart.raw) ? 'card' : 'hidden'}}">
-          <div class="card-header" ref:titleraw></div>
-          <div class="card-body">
-            <pre class="raw-elem" ref:chartraw></pre>
-          </div>
+    <div class="loader {_loading ? '' : 'd-none'}"></div>
+    <div class="chart-container" ref:canvascontainer style="position: relative; height: {chartHeight}px; width: 100%">
+      <div class="{(_currentChart && _currentChart.raw) ? 'card' : 'hidden'}">
+        <div class="card-header" ref:titleraw></div>
+        <div class="card-body">
+          <pre class="raw-elem" ref:chartraw></pre>
         </div>
-        <div class="{{(__currentChart && __currentChart.svg) ? 'chart-svg' : 'hidden'}}">
-          <h5 ref:titlesvg class="text-center"></h5>
-          <div ref:chartsvg></div>
-        </div>
-      <canvas class="{{(__currentChart && __currentChart.chart) ? 'chart-canvas' : 'hidden'}}" ref:chartcanvas></canvas>
+      </div>
+      <div class="{(_currentChart && _currentChart.svg) ? 'chart-svg' : 'hidden'}">
+        <h5 ref:titlesvg class="text-center"></h5>
+        <div ref:chartsvg></div>
+      </div>
+      <canvas class="{(_currentChart && _currentChart.chart) ? 'chart-canvas' : 'hidden'}" ref:chartcanvas></canvas>
     </div>
   </div>
 </div>
 
 <script>
-  import QueryEditor from 'QueryEditor';
-  import Nymph from 'Nymph';
+  import QueryEditor from 'nymph-query-editor';
+  import {Nymph} from 'nymph-client';
 
   const chartColors = {
     red: 'rgb(229,57,53)',
@@ -130,7 +130,7 @@
           maintainAspectRatio: false,
           scales: {
             xAxes: [{
-              type: "time",
+              type: 'time',
               time: {
                 format: timeFormat,
                 // round: 'day'
@@ -162,7 +162,7 @@
         }
       };
 
-      const ctx = elems.canvas.getContext("2d");
+      const ctx = elems.canvas.getContext('2d');
       return {context: ctx, chart: new Chart(ctx, config)};
     };
   };
@@ -199,7 +199,7 @@
           }
         },
         size: {
-          height: app.get('chartHeight')
+          height: app.get().chartHeight
         },
         zoom: {
           enabled: true
@@ -243,14 +243,14 @@
           rotated: rotated
         },
         size: {
-          height: app.get('chartHeight')
+          height: app.get().chartHeight
         },
         zoom: {
           enabled: true
         }
       };
 
-      elems.titlesvg.innerText = label + " (" + data.length + " total)";
+      elems.titlesvg.innerText = label + ' (' + data.length + ' total)';
 
       return {svg: c3.generate(config)};
     };
@@ -288,14 +288,14 @@
           rotated: rotated
         },
         size: {
-          height: app.get('chartHeight')
+          height: app.get().chartHeight
         },
         zoom: {
           enabled: true
         }
       };
 
-      elems.titlesvg.innerText = label + " (" + data.length + " total)";
+      elems.titlesvg.innerText = label + ' (' + data.length + ' total)';
 
       return {svg: c3.generate(config)};
     };
@@ -303,57 +303,57 @@
 
   const chartFunctions = {
     timeSeriesSteppedArea: {
-      name: "Time Series Stepped Area, Chart.js",
-      func: chartJsTimeSeries("line", true, true)
+      name: 'Time Series Stepped Area, Chart.js',
+      func: chartJsTimeSeries('line', true, true)
     },
 
     timeSeriesSteppedAreaC3: {
-      name: "Time Series Stepped Area, C3.js",
-      func: c3TimeSeries("line", true, true)
+      name: 'Time Series Stepped Area, C3.js',
+      func: c3TimeSeries('line', true, true)
     },
 
     timeSeriesStepped: {
-      name: "Time Series Stepped, Chart.js",
-      func: chartJsTimeSeries("line", false, true)
+      name: 'Time Series Stepped, Chart.js',
+      func: chartJsTimeSeries('line', false, true)
     },
 
     timeSeriesSteppedC3: {
-      name: "Time Series Stepped, C3.js",
-      func: c3TimeSeries("line", false, true)
+      name: 'Time Series Stepped, C3.js',
+      func: c3TimeSeries('line', false, true)
     },
 
     timeSeriesLine: {
-      name: "Time Series Line, Chart.js",
-      func: chartJsTimeSeries("line")
+      name: 'Time Series Line, Chart.js',
+      func: chartJsTimeSeries('line')
     },
 
     timeSeriesLineC3: {
-      name: "Time Series Line, C3.js",
-      func: c3TimeSeries("line")
+      name: 'Time Series Line, C3.js',
+      func: c3TimeSeries('line')
     },
 
     timeSeriesArea: {
-      name: "Time Series Area, Chart.js",
-      func: chartJsTimeSeries("line", true)
+      name: 'Time Series Area, Chart.js',
+      func: chartJsTimeSeries('line', true)
     },
 
     timeSeriesAreaC3: {
-      name: "Time Series Area, C3.js",
-      func: c3TimeSeries("line", true)
+      name: 'Time Series Area, C3.js',
+      func: c3TimeSeries('line', true)
     },
 
     timeSeriesBar: {
-      name: "Time Series Bar, Chart.js",
-      func: chartJsTimeSeries("bar")
+      name: 'Time Series Bar, Chart.js',
+      func: chartJsTimeSeries('bar')
     },
 
     timeSeriesBarC3: {
-      name: "Time Series Bar, C3.js",
-      func: c3TimeSeries("bar")
+      name: 'Time Series Bar, C3.js',
+      func: c3TimeSeries('bar')
     },
 
     bar: {
-      name: "Bar Chart, Chart.js",
+      name: 'Bar Chart, Chart.js',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
         const color = Chart.helpers.color;
         const config = {
@@ -383,7 +383,7 @@
             },
             title: {
               display: true,
-              text: label + " (" + data.length + " total)"
+              text: label + ' (' + data.length + ' total)'
             },
             onClick: function(ev, elements) {
               if (
@@ -399,23 +399,23 @@
           }
         };
 
-        const ctx = elems.canvas.getContext("2d");
+        const ctx = elems.canvas.getContext('2d');
         return {context: ctx, chart: new Chart(ctx, config)};
       }
     },
 
     categoryBarC3: {
-      name: "Bar Chart - Category, C3.js",
+      name: 'Bar Chart - Category, C3.js',
       func: c3CategoryChart('bar')
     },
 
     barC3: {
-      name: "Bar Chart, C3.js",
+      name: 'Bar Chart, C3.js',
       func: c3Chart('bar')
     },
 
     horizontalBar: {
-      name: "Horizontal Bar Chart, Chart.js",
+      name: 'Horizontal Bar Chart, Chart.js',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
         const color = Chart.helpers.color;
         const config = {
@@ -445,7 +445,7 @@
             },
             title: {
               display: true,
-              text: label + " (" + data.length + " total)"
+              text: label + ' (' + data.length + ' total)'
             },
             onClick: function(ev, elements) {
               if (
@@ -461,23 +461,23 @@
           }
         };
 
-        const ctx = elems.canvas.getContext("2d");
+        const ctx = elems.canvas.getContext('2d');
         return {context: ctx, chart: new Chart(ctx, config)};
       }
     },
 
     categoryHorizontalBarC3: {
-      name: "Horizontal Bar Chart - Category, C3.js",
+      name: 'Horizontal Bar Chart - Category, C3.js',
       func: c3CategoryChart('bar', true)
     },
 
     horizontalBarC3: {
-      name: "Horizontal Bar Chart, C3.js",
+      name: 'Horizontal Bar Chart, C3.js',
       func: c3Chart('bar', true)
     },
 
     pie: {
-      name: "Pie Chart, Chart.js",
+      name: 'Pie Chart, Chart.js',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
         const color = Chart.helpers.color;
         const chartColorsKeys = Object.keys(chartColors);
@@ -496,7 +496,7 @@
             maintainAspectRatio: false,
             title: {
               display: true,
-              text: label + " (" + data.length + " total)"
+              text: label + ' (' + data.length + ' total)'
             },
             onClick: function(ev, elements) {
               if (
@@ -512,61 +512,61 @@
           }
         };
 
-        const ctx = elems.canvas.getContext("2d");
+        const ctx = elems.canvas.getContext('2d');
         return {context: ctx, chart: new Chart(ctx, config)};
       }
     },
 
     pieC3: {
-      name: "Pie Chart, C3.js",
+      name: 'Pie Chart, C3.js',
       func: c3Chart('pie')
     },
 
     rawDataColonSeparated: {
-      name: "Raw Data (No Chart), Colon Separated",
+      name: 'Raw Data (No Chart), Colon Separated',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
-        const sanitizer = document.createElement("span");
+        const sanitizer = document.createElement('span');
         const sanitizeText = (text) => {
           sanitizer.innerText = text;
           return sanitizer.innerHTML;
         };
-        elems.titleraw.innerText = label + " (" + data.length + " total)";
-        elems.raw.innerHTML = data.map((v) => "<var>"+sanitizeText(v.label)+"</var>: "+sanitizeText(v.value)).join("\n");
+        elems.titleraw.innerText = label + ' (' + data.length + ' total)';
+        elems.raw.innerHTML = data.map((v) => '<var>'+sanitizeText(v.label)+'</var>: '+sanitizeText(v.value)).join('\n');
         return {raw: elems.raw};
       }
     },
 
     rawDataColumns: {
-      name: "Raw Data (No Chart), Columns",
+      name: 'Raw Data (No Chart), Columns',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
-        const sanitizer = document.createElement("span");
+        const sanitizer = document.createElement('span');
         const sanitizeText = (text) => {
           sanitizer.innerText = text;
           return sanitizer.innerHTML;
         };
         const maxWidth = data.reduce((currentMaxWidth, currentElem) => currentElem.label.length > currentMaxWidth ? currentElem.label.length : currentMaxWidth, 0);
-        elems.titleraw.innerText = label + " (" + data.length + " total)";
-        elems.raw.innerHTML = data.map((v) => sanitizeText(v.label)+(Array(maxWidth - v.label.length + 1).join(" "))+" "+sanitizeText(v.value)).join("\n");
+        elems.titleraw.innerText = label + ' (' + data.length + ' total)';
+        elems.raw.innerHTML = data.map((v) => sanitizeText(v.label)+(Array(maxWidth - v.label.length + 1).join(' '))+' '+sanitizeText(v.value)).join('\n');
         return {raw: elems.raw};
       }
     },
 
     rawDataEntries: {
-      name: "Raw Data (No Chart), Entries Only",
+      name: 'Raw Data (No Chart), Entries Only',
       func: function (app, label, axisLabel, data, elems, eventHandlers) {
-        const sanitizer = document.createElement("span");
+        const sanitizer = document.createElement('span');
         const sanitizeText = (text) => {
           sanitizer.innerText = text;
           return sanitizer.innerHTML;
         };
-        elems.titleraw.innerText = label + " (" + data.length + " total)";
-        elems.raw.innerHTML = data.map((v) => sanitizeText(v.label)).join("\n");
+        elems.titleraw.innerText = label + ' (' + data.length + ' total)';
+        elems.raw.innerHTML = data.map((v) => sanitizeText(v.label)).join('\n');
         return {raw: elems.raw};
       }
     }
   };
 
-  const originalHash = window.location.hash.replace(/^#/, "");
+  const originalHash = window.location.hash.replace(/^#/, '');
   let currentHash = originalHash;
 
   export default {
@@ -590,47 +590,48 @@
           updateFromHash(currentHash);
         }
       }, 5);
+    },
 
-      this.observe("options", () => {
-        const __aggregateFunctions = this.get("__aggregateFunctions");
-        const aggregateFunction = this.get("aggregateFunction");
-        if (!__aggregateFunctions.hasOwnProperty(aggregateFunction)) {
-          const __aggregateFunctionsKeys = this.get("__aggregateFunctionsKeys");
-          this.set({aggregateFunction: __aggregateFunctionsKeys[0]});
+    onstate ({changed, current}) {
+      if (changed.options) {
+        const {_aggregateFunctions, aggregateFunction} = current;
+        if (!_aggregateFunctions.hasOwnProperty(aggregateFunction)) {
+          const {_aggregateFunctionsKeys} = current;
+          this.set({aggregateFunction: _aggregateFunctionsKeys[0]});
         }
-      });
+      }
 
-      this.observe("aggregateFunction", (value) => {
-        const sort = this.get("sort");
-        const aggregate = this.get("__aggregateFunctions")[value];
+      if (changed.aggregateFunction) {
+        const {sort} = current;
+        const aggregate = current._aggregateFunctions[current.aggregateFunction];
         if (aggregate.sorting.indexOf(sort) === -1) {
           this.set({sort: aggregate.sorting[0]});
         }
-      });
+      }
     },
 
     data () {
       return {
-        __showQueryEditor: false,
-        __loading: false,
-        __currentChart: null,
-        __chartFunctions: chartFunctions,
-        __chartFunctionsKeys: Object.keys(chartFunctions),
+        _showQueryEditor: false,
+        _loading: false,
+        _currentChart: null,
+        _chartFunctions: chartFunctions,
+        _chartFunctionsKeys: Object.keys(chartFunctions),
         supportedClasses: [],
         chartHeight: 700,
-        aggregateFunction: "rawLogLine",
-        chartFunction: "rawDataEntries",
-        sort: "unchanged",
+        aggregateFunction: 'rawLogLine',
+        chartFunction: 'rawDataEntries',
+        sort: 'unchanged',
         options: {},
         selectors: []
       }
     },
 
     computed: {
-      __aggregateFunctions: (options) => Nymph.getEntityClass(options.class).aggregateFunctions,
-      __aggregateFunctionsKeys: (options) => Object.keys(Nymph.getEntityClass(options.class).aggregateFunctions),
-      query: (options, selectors) => [options, ...selectors],
-      urlHashUpdate: (aggregateFunction, chartFunction, options, selectors, sort, chartHeight) => {
+      _aggregateFunctions: ({ options }) => Nymph.getEntityClass(options.class).aggregateFunctions,
+      _aggregateFunctionsKeys: ({ options }) => Object.keys(Nymph.getEntityClass(options.class).aggregateFunctions),
+      query: ({ options, selectors }) => [options, ...selectors],
+      urlHashUpdate: ({ aggregateFunction, chartFunction, options, selectors, sort, chartHeight }) => {
         currentHash = JSON.stringify({aggregateFunction, chartFunction, options, selectors, sort, chartHeight});
         window.location.hash = currentHash;
         return null;
@@ -639,28 +640,26 @@
 
     methods: {
       runQuery () {
-        const __currentChart = this.get("__currentChart");
-        const aggregateFunction = this.get("aggregateFunction");
-        const chartFunction = this.get("chartFunction");
+        const {_currentChart, aggregateFunction, chartFunction} = this.get();
 
-        if (__currentChart && __currentChart.chart) {
-          __currentChart.chart.destroy();
+        if (_currentChart && _currentChart.chart) {
+          _currentChart.chart.destroy();
         }
-        if (__currentChart && __currentChart.context) {
-          __currentChart.context.clearRect(0, 0, this.refs.chartcanvas.width, this.refs.chartcanvas.height);
+        if (_currentChart && _currentChart.context) {
+          _currentChart.context.clearRect(0, 0, this.refs.chartcanvas.width, this.refs.chartcanvas.height);
         }
-        if (__currentChart && __currentChart.raw) {
-          __currentChart.raw.innerHTML = "";
+        if (_currentChart && _currentChart.raw) {
+          _currentChart.raw.innerHTML = '';
         }
 
         this.set({
-          __currentChart: null,
-          __loading: true
+          _currentChart: null,
+          _loading: true
         });
-        const query = this.get("query");
+        const {query} = this.get();
         Nymph.getEntities(...query).then((entries) => {
-          const aggFuncObj = this.get("__aggregateFunctions")[aggregateFunction];
-          const sort = this.get("sort");
+          const aggFuncObj = this.get()._aggregateFunctions[aggregateFunction];
+          const {sort} = this.get();
           const chartFuncObj = chartFunctions[chartFunction];
           // Run the aggregator:
           const aggResults = aggFuncObj.func(entries, sort);
@@ -669,22 +668,22 @@
 
           // Create the chart:
           this.set({
-            __currentChart: chartFuncObj.func(this, aggFuncObj.name, aggFuncObj.axisLabel, data, {
+            _currentChart: chartFuncObj.func(this, aggFuncObj.name, aggFuncObj.axisLabel, data, {
               canvas: this.refs.chartcanvas,
               titlesvg: this.refs.titlesvg,
               svg: this.refs.chartsvg,
               titleraw: this.refs.titleraw,
               raw: this.refs.chartraw
             }, eventHandlers),
-            __loading: false
+            _loading: false
           });
         }, (err) => {
-          alert("Error: "+err);
+          alert('Error: '+err);
         });
       },
 
       toggleQueryEditor () {
-        this.set({__showQueryEditor: !this.get("__showQueryEditor")});
+        this.set({_showQueryEditor: !this.get()._showQueryEditor});
       }
     },
 

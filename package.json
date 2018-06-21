@@ -4,15 +4,18 @@
   "description": "Client files for Logalyzer - Build a log analyzer for anything.",
   "main": "logalyze.js",
   "scripts": {
-    "build": "npm run build-components && npm run build-entities",
-    "build-components": "npm run build-logalyzer-app && npm run build-main-app",
-    "build-logalyzer-app": "svelte compile --format es src/Components/LogalyzerApp.html > lib/Components/LogalyzerApp.js && babel lib/Components/LogalyzerApp.js -o lib/Components/LogalyzerApp.js",
-    "build-main-app": "svelte compile --format es src/Components/MainApp.html > lib/Components/MainApp.js && babel lib/Components/MainApp.js -o lib/Components/MainApp.js",
-    "build-entities": "babel -d lib/Entities/ src/Entities/",
-    "watch-entities": "babel --watch -d lib/Entities/ src/Entities/",
+    "build": "npm run compile && npm run copy && npm run transpile",
+    "compile": "svelte compile src/Components/ -o lib/es/Components/",
+    "copy": "cp -r src/Entities lib/es/",
+    "transpile": "babel -d lib/umd/ lib/es/",
     "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "lib",
+    "src",
+    "logalyze.js"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sciactive/logalyzer-client.git"
@@ -23,7 +26,8 @@
     "analyzer",
     "analyser",
     "logging",
-    "logs"
+    "logs",
+    "nymph"
   ],
   "author": "Hunter Perrin <hperrin@gmail.com>",
   "license": "Apache-2.0",
@@ -32,28 +36,27 @@
   },
   "homepage": "https://github.com/sciactive/logalyzer-client#readme",
   "dependencies": {
-    "chart.js": "^2.7.1",
-    "chartjs-plugin-zoom": "^0.6.2",
+    "chart.js": "^2.7.2",
+    "chartjs-plugin-zoom": "^0.6.3",
     "compressing": "^1.2.3",
     "minimist": "^1.2.0",
-    "module-alias": "^2.0.3",
-    "moment": "^2.20.1",
-    "n-readlines": "^0.2.8",
-    "nymph-client": "^3.0.4",
-    "nymph-client-node": "^2.0.1",
-    "nymph-query-editor": "^1.1.4",
-    "request": "^2.83.0",
+    "module-alias": "^2.1.0",
+    "moment": "^2.22.2",
+    "n-readlines": "^1.0.0",
+    "nymph-client": "^4.0.0-beta.11",
+    "nymph-client-node": "^2.0.2",
+    "nymph-query-editor": "^2.0.0-beta.1",
+    "request": "^2.87.0",
     "split": "^1.0.1",
     "tilmeld": "^1.0.0-beta.11",
-    "ua-parser-js": "^0.7.17"
+    "ua-parser-js": "^0.7.18"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
-    "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
-    "babel-preset-env": "^1.6.1",
+    "babel-preset-env": "^1.7.0",
     "babel-preset-stage-3": "^6.24.1",
-    "svelte": "^1.51.1",
-    "svelte-cli": "^2.1.0"
+    "svelte": "^2.8.0",
+    "svelte-cli": "^3.0.0"
   }
 }
