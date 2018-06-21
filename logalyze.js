@@ -277,8 +277,8 @@ const Group = require('tilmeld').Group;
       // Put together each line into a log entry. This allows entries to span
       // multiple lines before they are ultimately processed.
       let origLine, pendingEntries = [], currentProcesses = [];
-      while (origLine = await getNextLine()) {
-        console.log(origLine);
+      while ((origLine = await getNextLine()) !== false) {
+        // console.log(origLine);
         const lines = [];
 
         // Sometimes log lines can be inserted in the middle of others. (I know,
@@ -330,6 +330,14 @@ const Group = require('tilmeld').Group;
             await Promise.all(currentProcesses);
             currentProcesses = [];
           }
+        }
+      }
+      for (let idx in pendingEntries) {
+        let entry = pendingEntries[idx];
+        entry.logIsComplete();
+        if (entry.isLogLineComplete()) {
+          currentProcesses.push(processLogEntry(entry));
+          pendingEntries.splice(idx, 1);
         }
       }
       if (pendingEntries.length) {

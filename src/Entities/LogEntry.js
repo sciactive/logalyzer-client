@@ -629,6 +629,10 @@ export default class LogEntry extends Entity {
     return !!this.logLines.length;
   }
 
+  logIsComplete() {
+    // Does nothing.
+  }
+
   // === Static Methods ===
 
   static isLogLineStart(line) {
