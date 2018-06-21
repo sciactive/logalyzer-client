@@ -17,8 +17,8 @@ export class LogEntry extends Entity {
   /**
    * @return {boolean} True is the line was parsed, false if the entry should be skipped according to options.
    */
-  async parseAndSet(line, options, ipDataCache) {
-    return false;
+  parseAndSet(line, options, ipDataCache) {
+    return Promise.resolve(false);
   }
 
   parseFields(line, maxFields, separator = ' ', enclosingPairs = ['""', '[]']) {
