@@ -8,7 +8,7 @@ const argv = require('minimist')(process.argv.slice(2));
 // Nymph Node client for the win.
 const NymphNode = require('nymph-client-node');
 NymphNode.enableCookies();
-const Nymph = NymphNode.Nymph;
+const {Nymph} = NymphNode;
 
 const alias = require('module-alias');
 alias.addAliases({
@@ -49,8 +49,7 @@ for (let file of logEntryFiles) {
   }
 }
 
-const User = require('tilmeld').User;
-const Group = require('tilmeld').Group;
+const {User, Group} = require('tilmeld-client');
 
 (async () => {
   let LogEntry;

@@ -48,7 +48,7 @@
     "nymph-query-editor": "^2.0.0-beta.2",
     "request": "^2.87.0",
     "split": "^1.0.1",
-    "tilmeld": "^1.0.0-beta.11",
+    "tilmeld-client": "^1.0.0-beta.21",
     "ua-parser-js": "^0.7.18"
   },
   "devDependencies": {
